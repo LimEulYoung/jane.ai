@@ -28,7 +28,7 @@ class VacationRequest(BaseModel):
 class VacationService:
     """Service for handling vacation requests through KDI portal automation"""
     
-    def __init__(self, username: str = "322000632", password: str = "2023qhdks!!"):
+    def __init__(self, username: str = "", password: str = ""):
         self.username = username
         self.password = password
         self.driver = None
