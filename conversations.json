@@ -1,0 +1,20 @@
+{
+  "effe643d98d7e7331cfedf9d7b531438": {
+    "sender_email": "test@example.com",
+    "original_subject": "휴가 신청",
+    "messages": [
+      {
+        "timestamp": "2025-08-27T13:19:00.027448",
+        "sender": "test@example.com",
+        "content": "휴가를 신청하고 싶습니다",
+        "is_user": true
+      },
+      {
+        "timestamp": "2025-08-27T13:19:00.027448",
+        "sender": "jane.ai@kdis.ac.kr",
+        "content": "휴가 신청 절차를 안내드리겠습니다",
+        "is_user": false
+      }
+    ]
+  }
+}
