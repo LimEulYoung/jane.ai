@@ -5,6 +5,7 @@ venv/
 
 # Configuration
 CLAUDE.md
+.env
 
 # Logs
 logs/
