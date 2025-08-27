@@ -1,21 +1,32 @@
 """
-AI service for generating email responses
+AI service for generating email responses using Agent system
 """
 from openai import OpenAI
 from ..models.email_models import ProcessingContext
 from ..utils.logging_utils import get_logger
 from ..utils.email_utils import extract_email_body, separate_current_message_from_thread
+from ..agents.jane_agents import JaneAgents
+import asyncio
 
 logger = get_logger('ai_service')
 
 class AIService:
-    """AI service for generating intelligent email responses"""
+    """AI service for generating intelligent email responses using Agent system"""
     
     def __init__(self, api_key: str, model: str = "gpt-4o", max_tokens: int = 1000, temperature: float = 0.7):
+        # Keep OpenAI client for fallback
         self.client = OpenAI(api_key=api_key)
         self.model = model
         self.max_tokens = max_tokens
         self.temperature = temperature
+        
+        # Initialize Agent system
+        try:
+            self.jane_agents = JaneAgents()
+            logger.info("에이전트 시스템 초기화 완료")
+        except Exception as e:
+            logger.error(f"에이전트 시스템 초기화 실패: {e}")
+            self.jane_agents = None
         
         # Jane.ai 시스템 프롬프트
         self.system_prompt = """당신은 Jane.ai, 한국개발연구원 국제정책대학원(KDI School)의 전문 이메일 응답 AI입니다.
@@ -48,7 +59,49 @@ class AIService:
 모든 응답은 "안녕하세요, Jane.ai입니다."로 시작하고, "추가 문의사항이 있으시면 언제든 연락주세요."로 마무리해주세요."""
     
     def generate_response(self, context: ProcessingContext) -> str:
-        """Generate AI response based on processing context"""
+        """Generate AI response based on processing context using Agent system"""
+        try:
+            # Use Agent system if available
+            if self.jane_agents:
+                return self._generate_agent_response(context)
+            else:
+                # Fallback to original OpenAI approach
+                return self._generate_openai_response(context)
+                
+        except Exception as e:
+            logger.error(f"AI 답변 생성 실패: {e}")
+            return self._get_fallback_response()
+    
+    def _generate_agent_response(self, context: ProcessingContext) -> str:
+        """Generate response using Agent system"""
+        try:
+            current_message = context.email_content.current_message
+            
+            # Email context for agents
+            email_context = {
+                'sender': context.email_info.sender,
+                'subject': context.email_info.subject,
+                'date': context.email_info.date,
+                'thread_history': context.email_content.thread_history
+            }
+            
+            # Run agent processing (synchronous wrapper for async)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                response = loop.run_until_complete(
+                    self.jane_agents.process_email(current_message, email_context)
+                )
+                return response
+            finally:
+                loop.close()
+                
+        except Exception as e:
+            logger.error(f"에이전트 응답 생성 실패: {e}")
+            return self._generate_openai_response(context)
+    
+    def _generate_openai_response(self, context: ProcessingContext) -> str:
+        """Fallback OpenAI response generation"""
         try:
             # 현재 메시지와 이전 대화 분리
             current_message = context.email_content.current_message
@@ -102,12 +155,12 @@ class AIService:
             
             ai_response = response.choices[0].message.content.strip()
             
-            logger.info("AI 답변 생성 완료")
+            logger.info("OpenAI 답변 생성 완료")
             return ai_response
             
         except Exception as e:
-            logger.error(f"AI 답변 생성 실패: {e}")
-            return self._get_fallback_response()
+            logger.error(f"OpenAI 답변 생성 실패: {e}")
+            raise e
     
     def _get_fallback_response(self) -> str:
         """API 오류 시 기본 답변"""
